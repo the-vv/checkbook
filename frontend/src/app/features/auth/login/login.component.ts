@@ -1,0 +1,83 @@
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
+import { RouterLink, Router } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { PasswordModule } from 'primeng/password';
+import { MessageModule } from 'primeng/message';
+import { AuthService } from '../../../core/services/auth.service';
+
+@Component({
+  selector: 'app-login',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, PasswordModule, MessageModule],
+  template: `
+    <div class="min-h-screen bg-slate-950 flex items-center justify-center px-4">
+      <div class="w-full max-w-md">
+        <div class="text-center mb-8">
+          <div class="flex items-center justify-center gap-2 mb-3">
+            <i class="pi pi-check-square text-violet-400 text-4xl"></i>
+            <h1 class="text-3xl font-bold text-white">Checkbook</h1>
+          </div>
+          <p class="text-slate-400">Sign in to manage your checklists</p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+          <h2 class="text-xl font-semibold text-white mb-6">Welcome back</h2>
+
+          @if (error) {
+            <p-message severity="error" [text]="error" styleClass="w-full mb-4" />
+          }
+
+          <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-4">
+            <div class="flex flex-col gap-1">
+              <label class="text-slate-300 text-sm font-medium">Email</label>
+              <input pInputText formControlName="email" type="email" placeholder="you@example.com"
+                class="w-full bg-slate-800 border-slate-700 text-white placeholder-slate-500" />
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label class="text-slate-300 text-sm font-medium">Password</label>
+              <p-password formControlName="password" [feedback]="false" [toggleMask]="true"
+                placeholder="••••••••" styleClass="w-full"
+                inputStyleClass="w-full bg-slate-800 border-slate-700 text-white placeholder-slate-500" />
+            </div>
+
+            <p-button type="submit" label="Sign In" icon="pi pi-sign-in" styleClass="w-full"
+              [loading]="loading" severity="secondary" />
+          </form>
+
+          <p class="text-center text-slate-400 text-sm mt-6">
+            Don't have an account?
+            <a routerLink="/auth/signup" class="text-violet-400 hover:text-violet-300 font-medium ml-1">Sign up</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  `,
+})
+export class LoginComponent {
+  form = this.fb.group({
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', Validators.required],
+  });
+  loading = false;
+  error = '';
+
+  constructor(private fb: FormBuilder, private auth: AuthService, private router: Router) {}
+
+  submit() {
+    if (this.form.invalid) return;
+    this.loading = true;
+    this.error = '';
+    const { email, password } = this.form.value;
+    this.auth.login(email!, password!).subscribe({
+      next: () => this.router.navigate(['/templates']),
+      error: (e) => {
+        this.error = e.error?.message || 'Invalid credentials';
+        this.loading = false;
+      },
+    });
+  }
+}

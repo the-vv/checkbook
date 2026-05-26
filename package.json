@@ -1,0 +1,9 @@
+{
+  "name": "checkbook",
+  "version": "1.0.0",
+  "scripts": {
+    "start:backend": "cd backend && npm run start:dev",
+    "start:frontend": "cd frontend && npm start",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install"
+  }
+}
