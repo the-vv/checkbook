@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -23,20 +23,20 @@ import { ChecklistsService } from '../../../core/services/checklists.service';
           <i class="pi pi-arrow-left text-xl"></i>
         </a>
         <div class="flex-1">
-          <h1 class="text-2xl font-bold text-white">{{ template?.name }}</h1>
-          @if (template?.description) {
-            <p class="text-slate-400 mt-1">{{ template?.description }}</p>
+          <h1 class="text-2xl font-bold text-white">{{ template()?.name }}</h1>
+          @if (template()?.description) {
+            <p class="text-slate-400 mt-1">{{ template()?.description }}</p>
           }
         </div>
-        <a [routerLink]="['/templates', template?.id, 'edit']">
+        <a [routerLink]="['/templates', template()?.id, 'edit']">
           <p-button icon="pi pi-pencil" label="Edit" severity="secondary" size="small" />
         </a>
-        <a [routerLink]="['/checklists/new']" [queryParams]="{ templateId: template?.id }">
+        <a [routerLink]="['/checklists/new']" [queryParams]="{ templateId: template()?.id }">
           <p-button icon="pi pi-play" label="Use Template" size="small" />
         </a>
       </div>
 
-      @if (template) {
+      @if (template(); as template) {
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Template Items -->
           <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
@@ -63,10 +63,10 @@ import { ChecklistsService } from '../../../core/services/checklists.service';
           <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-white font-semibold">Usage History</h3>
-              <span class="text-slate-400 text-sm">{{ checklists.length }} uses</span>
+              <span class="text-slate-400 text-sm">{{ checklists().length }} uses</span>
             </div>
 
-            @if (checklists.length === 0) {
+            @if (checklists().length === 0) {
               <div class="text-center py-6">
                 <p class="text-slate-500 text-sm mb-3">Not used yet</p>
                 <a [routerLink]="['/checklists/new']" [queryParams]="{ templateId: template.id }">
@@ -75,7 +75,7 @@ import { ChecklistsService } from '../../../core/services/checklists.service';
               </div>
             } @else {
               <div class="space-y-2">
-                @for (cl of checklists; track cl.id) {
+                @for (cl of checklists(); track cl.id) {
                   <a [routerLink]="['/checklists', cl.id]"
                     class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 transition-colors">
                     <div class="flex-1 min-w-0">
@@ -95,11 +95,11 @@ import { ChecklistsService } from '../../../core/services/checklists.service';
   `,
 })
 export class TemplateDetailComponent implements OnInit {
-  template: Template | null = null;
-  checklists: ChecklistInstance[] = [];
+  template = signal<Template | null>(null);
+  checklists = signal<ChecklistInstance[]>([]);
 
   get sortedItems() {
-    return [...(this.template?.items || [])].sort((a, b) => a.order - b.order);
+    return [...(this.template()?.items || [])].sort((a, b) => a.order - b.order);
   }
 
   constructor(
@@ -112,10 +112,10 @@ export class TemplateDetailComponent implements OnInit {
   ngOnInit() {
     const id = +this.route.snapshot.params['id'];
     this.templatesService.getOne(id).subscribe((t) => {
-      this.template = t;
+      this.template.set(t);
     });
     this.checklistsService.getAll(id).subscribe((c) => {
-      this.checklists = c;
+      this.checklists.set(c);
     });
   }
 }

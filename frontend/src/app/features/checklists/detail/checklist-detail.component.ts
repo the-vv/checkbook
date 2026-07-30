@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -19,7 +19,7 @@ import { ChecklistInstance, InstanceItem } from '../../../core/models';
     <div class="p-6 max-w-2xl mx-auto">
       <p-toast />
 
-      @if (checklist) {
+      @if (checklist(); as checklist) {
         <div class="flex items-center gap-3 mb-6">
           <a routerLink="/checklists" class="text-slate-400 hover:text-white transition-colors">
             <i class="pi pi-arrow-left text-xl"></i>
@@ -37,7 +37,7 @@ import { ChecklistInstance, InstanceItem } from '../../../core/models';
           </div>
           @if (checklist.status !== 'completed') {
             <p-button label="Mark Complete" icon="pi pi-check-circle" size="small"
-              severity="success" (onClick)="markComplete()" [loading]="saving" />
+              severity="success" (onClick)="markComplete()" [loading]="saving()" />
           }
         </div>
 
@@ -74,10 +74,14 @@ import { ChecklistInstance, InstanceItem } from '../../../core/models';
           <div class="space-y-1">
             @for (item of sortedItems; track item.id) {
               <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 transition-colors group"
-                [class.opacity-50]="checklist.status === 'completed'">
-                <p-checkbox [(ngModel)]="item.checked" [binary]="true"
-                  (onChange)="toggleItem(item)"
-                  [disabled]="checklist.status === 'completed'" />
+                [class.opacity-50]="checklist.status === 'completed'"
+                [class.cursor-pointer]="checklist.status !== 'completed'"
+                (click)="checklist.status !== 'completed' && toggleItemRow(item)">
+                <div (click)="$event.stopPropagation()">
+                  <p-checkbox [(ngModel)]="item.checked" [binary]="true"
+                    (onChange)="toggleItem(item)"
+                    [disabled]="checklist.status === 'completed'" />
+                </div>
                 <span class="flex-1 text-slate-300" [class.line-through]="item.checked"
                   [class.text-slate-500]="item.checked">
                   {{ item.text }}
@@ -90,12 +94,12 @@ import { ChecklistInstance, InstanceItem } from '../../../core/models';
           </div>
 
           <!-- Add item inline -->
-          @if (addingItem) {
+          @if (addingItem()) {
             <div class="flex items-center gap-2 mt-3 pt-3 border-t border-slate-800">
               <input #newItemInput class="flex-1 bg-slate-800 border border-slate-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-violet-500"
-                placeholder="New item..." [(ngModel)]="newItemText"
+                placeholder="New item..." [ngModel]="newItemText()" (ngModelChange)="newItemText.set($event)"
                 (keyup.enter)="saveNewItem()" (keyup.escape)="cancelAddItem()" />
-              <p-button icon="pi pi-check" size="small" (onClick)="saveNewItem()" [disabled]="!newItemText.trim()" />
+              <p-button icon="pi pi-check" size="small" (onClick)="saveNewItem()" [disabled]="!newItemText().trim()" />
               <p-button icon="pi pi-times" size="small" severity="secondary" (onClick)="cancelAddItem()" />
             </div>
           }
@@ -116,19 +120,19 @@ import { ChecklistInstance, InstanceItem } from '../../../core/models';
   `,
 })
 export class ChecklistDetailComponent implements OnInit {
-  checklist: ChecklistInstance | null = null;
-  saving = false;
-  addingItem = false;
-  newItemText = '';
+  checklist = signal<ChecklistInstance | null>(null);
+  saving = signal(false);
+  addingItem = signal(false);
+  newItemText = signal('');
 
   get sortedItems() {
-    return [...(this.checklist?.items || [])].sort((a, b) => a.order - b.order);
+    return [...(this.checklist()?.items || [])].sort((a, b) => a.order - b.order);
   }
 
-  get checkedCount() { return this.checklist?.items?.filter((i) => i.checked).length || 0; }
+  get checkedCount() { return this.checklist()?.items?.filter((i) => i.checked).length || 0; }
 
   get progressPct() {
-    const total = this.checklist?.items?.length || 0;
+    const total = this.checklist()?.items?.length || 0;
     if (!total) return 0;
     return Math.round((this.checkedCount / total) * 100);
   }
@@ -146,44 +150,52 @@ export class ChecklistDetailComponent implements OnInit {
   }
 
   loadChecklist(id: number) {
-    this.checklistsService.getOne(id).subscribe((c) => { this.checklist = c; });
+    this.checklistsService.getOne(id).subscribe((c) => { this.checklist.set(c); });
   }
 
   toggleItem(item: InstanceItem) {
-    if (!this.checklist) return;
-    const items = this.checklist.items.map((i) => ({
+    const current = this.checklist();
+    if (!current) return;
+    const items = current.items.map((i) => ({
       id: i.id,
       text: i.text,
       checked: i.id === item.id ? item.checked : i.checked,
       order: i.order,
       templateItemId: i.templateItemId,
     }));
-    this.checklistsService.update(this.checklist.id, { items }).subscribe({
+    this.checklistsService.update(current.id, { items }).subscribe({
       error: () => {
         item.checked = !item.checked;
+        this.checklist.update((c) => c ? { ...c, items: [...c.items] } : c);
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Could not save' });
       },
     });
   }
 
-  startAddItem() { this.addingItem = true; this.newItemText = ''; }
+  toggleItemRow(item: InstanceItem) {
+    item.checked = !item.checked;
+    this.toggleItem(item);
+  }
 
-  cancelAddItem() { this.addingItem = false; this.newItemText = ''; }
+  startAddItem() { this.addingItem.set(true); this.newItemText.set(''); }
+
+  cancelAddItem() { this.addingItem.set(false); this.newItemText.set(''); }
 
   saveNewItem() {
-    if (!this.newItemText.trim() || !this.checklist) return;
-    const currentItems = this.checklist.items.map((i) => ({
+    const current = this.checklist();
+    if (!this.newItemText().trim() || !current) return;
+    const currentItems = current.items.map((i) => ({
       text: i.text,
       checked: i.checked,
       order: i.order,
       templateItemId: i.templateItemId,
     }));
     const newOrder = currentItems.length;
-    this.checklistsService.update(this.checklist.id, {
-      items: [...currentItems, { text: this.newItemText.trim(), checked: false, order: newOrder }],
+    this.checklistsService.update(current.id, {
+      items: [...currentItems, { text: this.newItemText().trim(), checked: false, order: newOrder }],
     }).subscribe({
       next: (updated) => {
-        this.checklist = updated;
+        this.checklist.set(updated);
         this.cancelAddItem();
       },
       error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Could not add item' }),
@@ -191,15 +203,16 @@ export class ChecklistDetailComponent implements OnInit {
   }
 
   markComplete() {
-    if (!this.checklist) return;
-    this.saving = true;
-    this.checklistsService.update(this.checklist.id, { status: 'completed' }).subscribe({
+    const current = this.checklist();
+    if (!current) return;
+    this.saving.set(true);
+    this.checklistsService.update(current.id, { status: 'completed' }).subscribe({
       next: (updated) => {
-        this.checklist = updated;
-        this.saving = false;
+        this.checklist.set(updated);
+        this.saving.set(false);
         this.messageService.add({ severity: 'success', summary: 'Completed!', detail: 'Checklist marked as complete' });
       },
-      error: () => { this.saving = false; },
+      error: () => { this.saving.set(false); },
     });
   }
 }

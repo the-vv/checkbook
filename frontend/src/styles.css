@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "primeicons/primeicons.css";
 
+@layer theme, base, primeng, components, utilities;
+
 html, body {
   height: 100%;
   margin: 0;

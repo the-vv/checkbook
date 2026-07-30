@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, Validators, ReactiveFormsModule, FormArray } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -38,7 +38,7 @@ import { Template } from '../../../core/models';
 
           <div class="flex flex-col gap-1">
             <label class="text-slate-300 text-sm font-medium">Template *</label>
-            <p-select [options]="templateOptions" formControlName="templateId"
+            <p-select [options]="templateOptions()" formControlName="templateId"
               optionLabel="label" optionValue="value"
               placeholder="Choose a template"
               styleClass="w-full"
@@ -60,7 +60,7 @@ import { Template } from '../../../core/models';
         </div>
 
         <!-- Preview Items from Template -->
-        @if (selectedTemplate) {
+        @if (selectedTemplate()) {
           <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <div class="flex items-center justify-between mb-4">
               <div>
@@ -108,7 +108,7 @@ import { Template } from '../../../core/models';
 
         <div class="flex items-center gap-3 justify-end">
           <p-button type="button" label="Cancel" severity="secondary" [text]="true" (onClick)="goBack()" />
-          <p-button type="submit" label="Create Checklist" icon="pi pi-check" [loading]="loading" />
+          <p-button type="submit" label="Create Checklist" icon="pi pi-check" [loading]="loading()" />
         </div>
       </form>
     </div>
@@ -122,14 +122,14 @@ export class ChecklistFormComponent implements OnInit {
     notes: [''],
     extraItems: this.fb.array([]),
   });
-  loading = false;
-  templates: Template[] = [];
-  selectedTemplate: Template | null = null;
-  templateOptions: { label: string; value: number }[] = [];
+  loading = signal(false);
+  templates = signal<Template[]>([]);
+  selectedTemplate = signal<Template | null>(null);
+  templateOptions = signal<{ label: string; value: number }[]>([]);
 
   get extraItemsArray() { return this.form.get('extraItems') as FormArray; }
   get sortedTemplateItems() {
-    return [...(this.selectedTemplate?.items || [])].sort((a, b) => a.order - b.order);
+    return [...(this.selectedTemplate()?.items || [])].sort((a, b) => a.order - b.order);
   }
 
   constructor(
@@ -142,8 +142,8 @@ export class ChecklistFormComponent implements OnInit {
 
   ngOnInit() {
     this.templatesService.getAll().subscribe((t) => {
-      this.templates = t;
-      this.templateOptions = t.map((tpl) => ({ label: tpl.name, value: tpl.id }));
+      this.templates.set(t);
+      this.templateOptions.set(t.map((tpl) => ({ label: tpl.name, value: tpl.id })));
       const preselect = this.route.snapshot.queryParams['templateId'];
       if (preselect) {
         this.form.patchValue({ templateId: +preselect });
@@ -153,7 +153,7 @@ export class ChecklistFormComponent implements OnInit {
   }
 
   onTemplateChange(id: number) {
-    this.selectedTemplate = this.templates.find((t) => t.id === id) || null;
+    this.selectedTemplate.set(this.templates().find((t) => t.id === id) || null);
     this.extraItemsArray.clear();
   }
 
@@ -167,7 +167,7 @@ export class ChecklistFormComponent implements OnInit {
 
   submit() {
     if (this.form.invalid) return;
-    this.loading = true;
+    this.loading.set(true);
     const { templateId, title, notes, extraItems } = this.form.value;
     const extras = (extraItems as { text: string }[]).map((e) => ({ text: e.text }));
 
@@ -175,7 +175,7 @@ export class ChecklistFormComponent implements OnInit {
       next: (cl) => this.router.navigate(['/checklists', cl.id]),
       error: (e) => {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: e.error?.message || 'Failed to create' });
-        this.loading = false;
+        this.loading.set(false);
       },
     });
   }

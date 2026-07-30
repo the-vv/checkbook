@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, Validators, ReactiveFormsModule, FormArray } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -74,7 +74,7 @@ import { TemplatesService } from '../../../core/services/templates.service';
         <div class="flex items-center gap-3 justify-end">
           <p-button type="button" label="Cancel" severity="secondary" [text]="true" (onClick)="goBack()" />
           <p-button type="submit" [label]="editId ? 'Save Changes' : 'Create Template'"
-            icon="pi pi-check" [loading]="loading" />
+            icon="pi pi-check" [loading]="loading()" />
         </div>
       </form>
     </div>
@@ -87,7 +87,7 @@ export class TemplateFormComponent implements OnInit {
     description: [''],
     items: this.fb.array([]),
   });
-  loading = false;
+  loading = signal(false);
   editId: number | null = null;
 
   get itemsArray() { return this.form.get('items') as FormArray; }
@@ -124,7 +124,7 @@ export class TemplateFormComponent implements OnInit {
 
   submit() {
     if (this.form.invalid) return;
-    this.loading = true;
+    this.loading.set(true);
     const { name, description, items } = this.form.value;
     const payload = {
       name: name!,
@@ -140,7 +140,7 @@ export class TemplateFormComponent implements OnInit {
       next: (t) => this.router.navigate(['/templates', t.id]),
       error: (e) => {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: e.error?.message || 'Failed to save' });
-        this.loading = false;
+        this.loading.set(false);
       },
     });
   }

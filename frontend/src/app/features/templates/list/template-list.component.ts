@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -31,7 +31,7 @@ import { Template } from '../../../core/models';
         </a>
       </div>
 
-      @if (loading) {
+      @if (loading()) {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           @for (i of [1,2,3]; track i) {
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
@@ -41,7 +41,7 @@ import { Template } from '../../../core/models';
             </div>
           }
         </div>
-      } @else if (templates.length === 0) {
+      } @else if (templates().length === 0) {
         <div class="text-center py-16">
           <i class="pi pi-list text-slate-600 text-6xl mb-4 block"></i>
           <h3 class="text-slate-400 text-lg mb-2">No templates yet</h3>
@@ -52,7 +52,7 @@ import { Template } from '../../../core/models';
         </div>
       } @else {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          @for (template of templates; track template.id) {
+          @for (template of templates(); track template.id) {
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-violet-700 transition-colors group">
               <div class="flex items-start justify-between mb-3">
                 <div class="flex-1 min-w-0">
@@ -92,8 +92,8 @@ import { Template } from '../../../core/models';
   `,
 })
 export class TemplateListComponent implements OnInit {
-  templates: Template[] = [];
-  loading = true;
+  templates = signal<Template[]>([]);
+  loading = signal(true);
 
   constructor(
     private templatesService: TemplatesService,
@@ -106,10 +106,10 @@ export class TemplateListComponent implements OnInit {
   }
 
   loadTemplates() {
-    this.loading = true;
+    this.loading.set(true);
     this.templatesService.getAll().subscribe({
-      next: (t) => { this.templates = t; this.loading = false; },
-      error: () => { this.loading = false; },
+      next: (t) => { this.templates.set(t); this.loading.set(false); },
+      error: () => { this.loading.set(false); },
     });
   }
 
@@ -127,7 +127,7 @@ export class TemplateListComponent implements OnInit {
     this.templatesService.delete(id).subscribe({
       next: () => {
         this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Template removed' });
-        this.templates = this.templates.filter((t) => t.id !== id);
+        this.templates.update((list) => list.filter((t) => t.id !== id));
       },
       error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Could not delete' }),
     });

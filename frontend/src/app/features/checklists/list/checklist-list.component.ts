@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -39,7 +39,7 @@ import { ChecklistInstance, Template } from '../../../core/models';
           optionLabel="label" optionValue="value"
           styleClass="bg-slate-800 border-slate-700"
           placeholder="Filter by status" />
-        <p-select [options]="templateOptions" [(ngModel)]="templateFilter" (ngModelChange)="applyFilter()"
+        <p-select [options]="templateOptions()" [(ngModel)]="templateFilter" (ngModelChange)="applyFilter()"
           optionLabel="label" optionValue="value"
           styleClass="bg-slate-800 border-slate-700"
           placeholder="Filter by template" />
@@ -49,7 +49,7 @@ import { ChecklistInstance, Template } from '../../../core/models';
         }
       </div>
 
-      @if (loading) {
+      @if (loading()) {
         <div class="space-y-3">
           @for (i of [1,2,3,4]; track i) {
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
@@ -58,7 +58,7 @@ import { ChecklistInstance, Template } from '../../../core/models';
             </div>
           }
         </div>
-      } @else if (filtered.length === 0) {
+      } @else if (filtered().length === 0) {
         <div class="text-center py-16">
           <i class="pi pi-check-circle text-slate-600 text-6xl mb-4 block"></i>
           <h3 class="text-slate-400 text-lg mb-2">No checklists found</h3>
@@ -69,8 +69,9 @@ import { ChecklistInstance, Template } from '../../../core/models';
         </div>
       } @else {
         <div class="space-y-3">
-          @for (cl of filtered; track cl.id) {
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-violet-700 transition-colors">
+          @for (cl of filtered(); track cl.id) {
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-violet-700 transition-colors cursor-pointer"
+              (click)="openChecklist(cl)">
               <div class="flex items-center gap-4">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 mb-1">
@@ -94,10 +95,7 @@ import { ChecklistInstance, Template } from '../../../core/models';
                       [style.width.%]="progress(cl)"></div>
                   </div>
                 </div>
-                <div class="flex items-center gap-2 flex-shrink-0">
-                  <a [routerLink]="['/checklists', cl.id]">
-                    <p-button icon="pi pi-eye" size="small" severity="secondary" />
-                  </a>
+                <div class="flex items-center gap-2 flex-shrink-0" (click)="$event.stopPropagation()">
                   <p-button icon="pi pi-trash" size="small" severity="danger" [text]="true"
                     (onClick)="confirmDelete(cl)" />
                 </div>
@@ -110,10 +108,10 @@ import { ChecklistInstance, Template } from '../../../core/models';
   `,
 })
 export class ChecklistListComponent implements OnInit {
-  checklists: ChecklistInstance[] = [];
-  filtered: ChecklistInstance[] = [];
-  templates: Template[] = [];
-  loading = true;
+  checklists = signal<ChecklistInstance[]>([]);
+  filtered = signal<ChecklistInstance[]>([]);
+  templates = signal<Template[]>([]);
+  loading = signal(true);
   statusFilter: string | null = null;
   templateFilter: number | null = null;
 
@@ -122,26 +120,31 @@ export class ChecklistListComponent implements OnInit {
     { label: 'Active', value: 'active' },
     { label: 'Completed', value: 'completed' },
   ];
-  templateOptions: { label: string; value: number | null }[] = [{ label: 'All Templates', value: null }];
+  templateOptions = signal<{ label: string; value: number | null }[]>([{ label: 'All Templates', value: null }]);
 
   constructor(
     private checklistsService: ChecklistsService,
     private templatesService: TemplatesService,
     private confirmationService: ConfirmationService,
     private messageService: MessageService,
+    private router: Router,
   ) {}
+
+  openChecklist(cl: ChecklistInstance) {
+    this.router.navigate(['/checklists', cl.id]);
+  }
 
   ngOnInit() {
     this.checklistsService.getAll().subscribe({
-      next: (c) => { this.checklists = c; this.filtered = c; this.loading = false; },
-      error: () => { this.loading = false; },
+      next: (c) => { this.checklists.set(c); this.filtered.set(c); this.loading.set(false); },
+      error: () => { this.loading.set(false); },
     });
     this.templatesService.getAll().subscribe((t) => {
-      this.templates = t;
-      this.templateOptions = [
+      this.templates.set(t);
+      this.templateOptions.set([
         { label: 'All Templates', value: null },
         ...t.map((tpl) => ({ label: tpl.name, value: tpl.id })),
-      ];
+      ]);
     });
   }
 
@@ -151,17 +154,17 @@ export class ChecklistListComponent implements OnInit {
   }
 
   applyFilter() {
-    this.filtered = this.checklists.filter((c) => {
+    this.filtered.set(this.checklists().filter((c) => {
       const matchStatus = !this.statusFilter || c.status === this.statusFilter;
       const matchTemplate = !this.templateFilter || c.templateId === this.templateFilter;
       return matchStatus && matchTemplate;
-    });
+    }));
   }
 
   clearFilters() {
     this.statusFilter = null;
     this.templateFilter = null;
-    this.filtered = this.checklists;
+    this.filtered.set(this.checklists());
   }
 
   confirmDelete(cl: ChecklistInstance) {
@@ -174,7 +177,7 @@ export class ChecklistListComponent implements OnInit {
         this.checklistsService.delete(cl.id).subscribe({
           next: () => {
             this.messageService.add({ severity: 'success', summary: 'Deleted' });
-            this.checklists = this.checklists.filter((c) => c.id !== cl.id);
+            this.checklists.update((list) => list.filter((c) => c.id !== cl.id));
             this.applyFilter();
           },
           error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Could not delete' }),

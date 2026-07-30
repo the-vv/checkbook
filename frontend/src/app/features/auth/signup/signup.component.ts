@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink, Router } from '@angular/router';
@@ -26,8 +26,8 @@ import { AuthService } from '../../../core/services/auth.service';
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
           <h2 class="text-xl font-semibold text-white mb-6">Create account</h2>
 
-          @if (error) {
-            <p-message severity="error" [text]="error" styleClass="w-full mb-4" />
+          @if (error()) {
+            <p-message severity="error" [text]="error()" styleClass="w-full mb-4" />
           }
 
           <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-4">
@@ -51,7 +51,7 @@ import { AuthService } from '../../../core/services/auth.service';
             </div>
 
             <p-button type="submit" label="Create Account" icon="pi pi-user-plus" styleClass="w-full"
-              [loading]="loading" severity="secondary" />
+              [loading]="loading()" severity="secondary" />
           </form>
 
           <p class="text-center text-slate-400 text-sm mt-6">
@@ -70,21 +70,21 @@ export class SignupComponent {
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(6)]],
   });
-  loading = false;
-  error = '';
+  loading = signal(false);
+  error = signal('');
 
   constructor(private auth: AuthService, private router: Router) {}
 
   submit() {
     if (this.form.invalid) return;
-    this.loading = true;
-    this.error = '';
+    this.loading.set(true);
+    this.error.set('');
     const { name, email, password } = this.form.value;
     this.auth.signup(name!, email!, password!).subscribe({
       next: () => this.router.navigate(['/templates']),
       error: (e) => {
-        this.error = e.error?.message || 'Registration failed';
-        this.loading = false;
+        this.error.set(e.error?.message || 'Registration failed');
+        this.loading.set(false);
       },
     });
   }
