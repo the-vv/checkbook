@@ -4,14 +4,20 @@ import { Router } from '@angular/router';
 import { tap } from 'rxjs/operators';
 import { AuthResponse, User } from '../models';
 
-const API = 'http://localhost:3000/api';
+const API = '/api';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   currentUser = signal<User | null>(this.loadUser());
   token = signal<string | null>(localStorage.getItem('token'));
+  signupEnabled = signal<boolean>(true);
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(private http: HttpClient, private router: Router) {
+    this.http.get<{ signupEnabled: boolean }>(`${API}/auth/config`).subscribe({
+      next: (res) => this.signupEnabled.set(res.signupEnabled),
+      error: () => this.signupEnabled.set(true),
+    });
+  }
 
   signup(name: string, email: string, password: string) {
     return this.http.post<AuthResponse>(`${API}/auth/signup`, { name, email, password }).pipe(

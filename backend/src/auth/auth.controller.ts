@@ -1,4 +1,4 @@
-import { Body, Controller, Post, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Post, ValidationPipe } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto, SignupDto } from './auth.dto';
 
@@ -6,8 +6,16 @@ import { LoginDto, SignupDto } from './auth.dto';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Get('config')
+  config() {
+    return { signupEnabled: process.env.DISABLE_SIGNUP !== 'true' };
+  }
+
   @Post('signup')
   signup(@Body(ValidationPipe) dto: SignupDto) {
+    if (process.env.DISABLE_SIGNUP === 'true') {
+      throw new ForbiddenException('Account creation is disabled');
+    }
     return this.authService.signup(dto.email, dto.password, dto.name);
   }
 

@@ -1,0 +1,21 @@
+services:
+  checkbook:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: checkbook:latest
+    container_name: checkbook
+    restart: unless-stopped
+    # Only the frontend/UI port is published; the backend API is served
+    # from the same process on the same port under /api.
+    ports:
+      - "${HOST_PORT:-8080}:3000"
+    environment:
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
+      DISABLE_SIGNUP: ${DISABLE_SIGNUP:-false}
+      DB_PATH: /data/checkbook.sqlite
+    volumes:
+      # Bind-mounts the sqlite database to a local folder so data persists
+      # across container recreations and can be backed up directly.
+      - ./data:/data

@@ -14,7 +14,7 @@ import { InstanceItem } from './checklists/instance-item.entity';
   imports: [
     TypeOrmModule.forRoot({
       type: 'better-sqlite3',
-      database: 'checkbook.sqlite',
+      database: process.env.DB_PATH || 'checkbook.sqlite',
       entities: [User, Template, TemplateItem, ChecklistInstance, InstanceItem],
       synchronize: true,
     }),

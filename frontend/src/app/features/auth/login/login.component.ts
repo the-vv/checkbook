@@ -48,10 +48,12 @@ import { AuthService } from '../../../core/services/auth.service';
               [loading]="loading()" severity="secondary" />
           </form>
 
-          <p class="text-center text-slate-400 text-sm mt-6">
-            Don't have an account?
-            <a routerLink="/auth/signup" class="text-violet-400 hover:text-violet-300 font-medium ml-1">Sign up</a>
-          </p>
+          @if (auth.signupEnabled()) {
+            <p class="text-center text-slate-400 text-sm mt-6">
+              Don't have an account?
+              <a routerLink="/auth/signup" class="text-violet-400 hover:text-violet-300 font-medium ml-1">Sign up</a>
+            </p>
+          }
         </div>
       </div>
     </div>
@@ -66,7 +68,7 @@ export class LoginComponent {
   loading = signal(false);
   error = signal('');
 
-  constructor(private auth: AuthService, private router: Router) {}
+  constructor(protected auth: AuthService, private router: Router) {}
 
   submit() {
     if (this.form.invalid) return;
