@@ -1,11 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, Validators, ReactiveFormsModule, FormArray } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
-import { DropdownModule } from 'primeng/dropdown';
+import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { TemplatesService } from '../../../core/services/templates.service';
@@ -15,7 +15,7 @@ import { Template } from '../../../core/models';
 @Component({
   selector: 'app-checklist-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, TextareaModule, DropdownModule, ToastModule],
+  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, TextareaModule, SelectModule, ToastModule],
   providers: [MessageService],
   template: `
     <div class="p-6 max-w-2xl mx-auto">
@@ -38,7 +38,7 @@ import { Template } from '../../../core/models';
 
           <div class="flex flex-col gap-1">
             <label class="text-slate-300 text-sm font-medium">Template *</label>
-            <p-dropdown [options]="templateOptions" formControlName="templateId"
+            <p-select [options]="templateOptions" formControlName="templateId"
               optionLabel="label" optionValue="value"
               placeholder="Choose a template"
               styleClass="w-full"
@@ -115,6 +115,7 @@ import { Template } from '../../../core/models';
   `,
 })
 export class ChecklistFormComponent implements OnInit {
+  private fb = inject(FormBuilder);
   form = this.fb.group({
     templateId: [null as number | null, Validators.required],
     title: ['', Validators.required],
@@ -132,7 +133,6 @@ export class ChecklistFormComponent implements OnInit {
   }
 
   constructor(
-    private fb: FormBuilder,
     private templatesService: TemplatesService,
     private checklistsService: ChecklistsService,
     private router: Router,

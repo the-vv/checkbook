@@ -6,7 +6,7 @@ import { TagModule } from 'primeng/tag';
 import { SkeletonModule } from 'primeng/skeleton';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
-import { DropdownModule } from 'primeng/dropdown';
+import { SelectModule } from 'primeng/select';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { FormsModule } from '@angular/forms';
 import { ChecklistsService } from '../../../core/services/checklists.service';
@@ -16,7 +16,7 @@ import { ChecklistInstance, Template } from '../../../core/models';
 @Component({
   selector: 'app-checklist-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, ButtonModule, TagModule, SkeletonModule, ConfirmDialogModule, ToastModule, DropdownModule, FormsModule],
+  imports: [CommonModule, RouterLink, ButtonModule, TagModule, SkeletonModule, ConfirmDialogModule, ToastModule, SelectModule, FormsModule],
   providers: [ConfirmationService, MessageService],
   template: `
     <div class="p-6">
@@ -35,11 +35,11 @@ import { ChecklistInstance, Template } from '../../../core/models';
 
       <!-- Filter -->
       <div class="mb-4 flex items-center gap-3">
-        <p-dropdown [options]="filterOptions" [(ngModel)]="statusFilter" (ngModelChange)="applyFilter()"
+        <p-select [options]="filterOptions" [(ngModel)]="statusFilter" (ngModelChange)="applyFilter()"
           optionLabel="label" optionValue="value"
           styleClass="bg-slate-800 border-slate-700"
           placeholder="Filter by status" />
-        <p-dropdown [options]="templateOptions" [(ngModel)]="templateFilter" (ngModelChange)="applyFilter()"
+        <p-select [options]="templateOptions" [(ngModel)]="templateFilter" (ngModelChange)="applyFilter()"
           optionLabel="label" optionValue="value"
           styleClass="bg-slate-800 border-slate-700"
           placeholder="Filter by template" />
@@ -169,7 +169,7 @@ export class ChecklistListComponent implements OnInit {
       message: `Delete "${cl.title}"?`,
       header: 'Confirm Delete',
       icon: 'pi pi-trash',
-      acceptSeverity: 'danger',
+      acceptButtonProps: { severity: 'danger' },
       accept: () => {
         this.checklistsService.delete(cl.id).subscribe({
           next: () => {

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink, Router } from '@angular/router';
@@ -58,6 +58,7 @@ import { AuthService } from '../../../core/services/auth.service';
   `,
 })
 export class LoginComponent {
+  private fb = inject(FormBuilder);
   form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
@@ -65,7 +66,7 @@ export class LoginComponent {
   loading = false;
   error = '';
 
-  constructor(private fb: FormBuilder, private auth: AuthService, private router: Router) {}
+  constructor(private auth: AuthService, private router: Router) {}
 
   submit() {
     if (this.form.invalid) return;

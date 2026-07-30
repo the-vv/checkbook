@@ -118,7 +118,7 @@ export class TemplateListComponent implements OnInit {
       message: `Delete "${template.name}"? This will also delete all checklist instances.`,
       header: 'Confirm Delete',
       icon: 'pi pi-trash',
-      acceptSeverity: 'danger',
+      acceptButtonProps: { severity: 'danger' },
       accept: () => this.deleteTemplate(template.id),
     });
   }

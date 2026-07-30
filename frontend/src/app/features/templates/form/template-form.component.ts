@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, Validators, ReactiveFormsModule, FormArray } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -81,6 +81,7 @@ import { TemplatesService } from '../../../core/services/templates.service';
   `,
 })
 export class TemplateFormComponent implements OnInit {
+  private fb = inject(FormBuilder);
   form = this.fb.group({
     name: ['', Validators.required],
     description: [''],
@@ -92,7 +93,6 @@ export class TemplateFormComponent implements OnInit {
   get itemsArray() { return this.form.get('items') as FormArray; }
 
   constructor(
-    private fb: FormBuilder,
     private templatesService: TemplatesService,
     private router: Router,
     private route: ActivatedRoute,
